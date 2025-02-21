@@ -67,6 +67,8 @@ func (e *Engine) initRender(ctx context.Context) error {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 
+	gl.UseProgram(e.prog)
+
 	e.pixels = make([]byte, textureWidth*textureHeight*sizeColor)
 
 	e.logger.DebugContext(ctx, "render initialized")
@@ -91,7 +93,6 @@ func (e *Engine) shutdownRender() {
 
 func (e *Engine) render(ctx context.Context) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-	gl.UseProgram(e.prog)
 
 	gl.TexImage2D(
 		gl.TEXTURE_2D,
