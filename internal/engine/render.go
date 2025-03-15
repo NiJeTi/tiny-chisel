@@ -94,7 +94,7 @@ func (e *Engine) shutdownRender() {
 func (e *Engine) render(ctx *eCtx) {
 	for x := range e.textureW {
 		for y := range e.textureH {
-			offset := (x + (e.textureH-y-1)*e.textureW) * sizeColor
+			offset := (x + (e.textureH-1-y)*e.textureW) * sizeColor
 			const (
 				rOffset = iota
 				gOffset
