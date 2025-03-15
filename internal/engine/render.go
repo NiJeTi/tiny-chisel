@@ -5,10 +5,9 @@ import (
 	"fmt"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
-	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-func (e *Engine) initRender(ctx context.Context) error {
+func (e *Engine) initRender(ctx context.Context, width, height int) error {
 	quadVertices := []float32{
 		// 1st triangle
 		-1, 1, // top-left
@@ -69,7 +68,8 @@ func (e *Engine) initRender(ctx context.Context) error {
 
 	gl.UseProgram(e.prog)
 
-	e.pixels = make([]byte, textureWidth*textureHeight*sizeColor)
+	e.textureW, e.textureH = width, height
+	e.pixelData = make([]byte, width*height*sizeColor)
 
 	e.logger.DebugContext(ctx, "render initialized")
 
@@ -91,19 +91,38 @@ func (e *Engine) shutdownRender() {
 	e.logger.Debug("render shutdown complete")
 }
 
-func (e *Engine) render(ctx context.Context) {
+func (e *Engine) render(ctx *eCtx) {
+	for x := range e.textureW {
+		for y := range e.textureH {
+			offset := (x + (e.textureH-y-1)*e.textureW) * sizeColor
+			const (
+				rOffset = iota
+				gOffset
+				bOffset
+				aOffset
+			)
+
+			c := ctx.texture[x][y]
+
+			e.pixelData[offset+rOffset] = c.R
+			e.pixelData[offset+gOffset] = c.G
+			e.pixelData[offset+bOffset] = c.B
+			e.pixelData[offset+aOffset] = c.A
+		}
+	}
+
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	gl.TexImage2D(
 		gl.TEXTURE_2D,
 		0,
 		gl.RGBA,
-		int32(textureWidth),
-		int32(textureHeight),
+		int32(e.textureW),
+		int32(e.textureH),
 		0,
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
-		gl.Ptr(e.pixels),
+		gl.Ptr(e.pixelData),
 	)
 	gl.DrawArrays(gl.TRIANGLES, 0, quadVerticesCount)
 
@@ -112,6 +131,5 @@ func (e *Engine) render(ctx context.Context) {
 		e.logger.ErrorContext(ctx, "opengl error", "error", errCode)
 	}
 
-	glfw.PollEvents()
 	e.window.SwapBuffers()
 }
