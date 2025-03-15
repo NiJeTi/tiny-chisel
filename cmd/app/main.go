@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/nijeti/graphics/internal/controllers/simulation"
 	"github.com/nijeti/graphics/internal/engine"
 )
 
@@ -26,12 +27,6 @@ func main() {
 func run() (code int) {
 	loggerOpts := &slog.HandlerOptions{
 		Level: slog.LevelDebug,
-		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
-			if a.Key == slog.TimeKey {
-				a.Value = slog.TimeValue(a.Value.Time().UTC())
-			}
-			return a
-		},
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, loggerOpts))
 
@@ -48,9 +43,12 @@ func run() (code int) {
 	defer cancel()
 
 	// init
-	logger.Info("initializing")
+	logger.InfoContext(ctx, "initializing")
 
-	e, err := engine.Init(ctx, logger.With("module", "engine"))
+	e, err := engine.Init(
+		ctx, logger.With("module", "engine"),
+		simulation.New(),
+	)
 	if err != nil {
 		logger.Error("failed to initialize engine", "error", err)
 		return codeErr

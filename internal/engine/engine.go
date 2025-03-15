@@ -5,22 +5,34 @@ import (
 	"log/slog"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
-
-	"github.com/nijeti/graphics/internal/simulation"
 )
 
 type Engine struct {
-	logger            *slog.Logger
-	window            *glfw.Window
-	prog              uint32
-	vao, vbo, texture uint32
-	pixels            []byte
-	simulation        *simulation.Simulation
+	logger *slog.Logger
+
+	window *glfw.Window
+
+	prog uint32
+
+	textureW, textureH int
+	vao, vbo, texture  uint32
+	pixelData          []byte
+
+	keyStates      map[glfw.Key]bool
+	mouseStates    map[glfw.MouseButton]bool
+	mouseX, mouseY int
+
+	controllers []Controller
 }
 
-func Init(ctx context.Context, logger *slog.Logger) (*Engine, error) {
+func Init(
+	ctx context.Context, logger *slog.Logger, controllers ...Controller,
+) (*Engine, error) {
 	e := &Engine{
-		logger: logger,
+		logger:      logger,
+		keyStates:   make(map[glfw.Key]bool),
+		mouseStates: make(map[glfw.MouseButton]bool),
+		controllers: controllers,
 	}
 
 	if err := e.initGLFW(ctx); err != nil {
@@ -31,11 +43,7 @@ func Init(ctx context.Context, logger *slog.Logger) (*Engine, error) {
 		return nil, err
 	}
 
-	if err := e.initRender(ctx); err != nil {
-		return nil, err
-	}
-
-	if err := e.initSimulation(ctx); err != nil {
+	if err := e.initRender(ctx, textureWidth, textureHeight); err != nil {
 		return nil, err
 	}
 
@@ -43,22 +51,20 @@ func Init(ctx context.Context, logger *slog.Logger) (*Engine, error) {
 }
 
 func (e *Engine) Run(ctx context.Context) {
-	particles := e.simulation.Particles()
+	ectx := e.initContext(ctx)
+
+	for _, c := range e.controllers {
+		c.Init(ectx)
+	}
 
 	for !e.window.ShouldClose() && ctx.Err() == nil {
-		e.simulation.Tick()
+		e.preTick(ectx)
 
-		for x := range particles {
-			for y, p := range particles[x] {
-				offset := (x*textureHeight + y) * sizeColor
-				e.pixels[offset+0] = p.Color.R
-				e.pixels[offset+1] = p.Color.G
-				e.pixels[offset+2] = p.Color.B
-				e.pixels[offset+3] = p.Color.A
-			}
+		for _, c := range e.controllers {
+			c.Tick(ectx)
 		}
 
-		e.render(ctx)
+		e.render(ectx)
 	}
 }
 
@@ -66,4 +72,16 @@ func (e *Engine) Shutdown() {
 	e.shutdownRender()
 	e.shutdownOpenGL()
 	e.shutdownGLFW()
+}
+
+func (e *Engine) preTick(ctx *eCtx) {
+	glfw.PollEvents()
+
+	for key, state := range e.keyStates {
+		ctx.input.keys[key] = state
+	}
+	for button, state := range e.mouseStates {
+		ctx.input.mouseButtons[button] = state
+	}
+	ctx.input.mouseX, ctx.input.mouseY = e.mouseX, e.mouseY
 }

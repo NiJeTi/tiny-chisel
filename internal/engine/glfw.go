@@ -25,6 +25,10 @@ func (e *Engine) initGLFW(ctx context.Context) error {
 		return fmt.Errorf("failed to create window: %w", err)
 	}
 
+	window.SetKeyCallback(e.keyCallback)
+	window.SetMouseButtonCallback(e.mouseCallback)
+	window.SetCursorPosCallback(e.cursorPositionCallback)
+
 	window.MakeContextCurrent()
 	e.window = window
 
@@ -37,4 +41,38 @@ func (e *Engine) shutdownGLFW() {
 	glfw.Terminate()
 
 	e.logger.Debug("glfw shutdown complete")
+}
+
+func (e *Engine) keyCallback(
+	_ *glfw.Window,
+	key glfw.Key,
+	_ int,
+	action glfw.Action,
+	_ glfw.ModifierKey,
+) {
+	e.keyStates[key] = action == glfw.Press
+}
+
+func (e *Engine) mouseCallback(
+	_ *glfw.Window,
+	button glfw.MouseButton,
+	action glfw.Action,
+	_ glfw.ModifierKey,
+) {
+	e.mouseStates[button] = action == glfw.Press
+}
+
+func (e *Engine) cursorPositionCallback(
+	w *glfw.Window, x float64, y float64,
+) {
+	width, height := w.GetSize()
+	if x < 0 || x > float64(width) {
+		return
+	}
+	if y < 0 || y > float64(height) {
+		return
+	}
+
+	e.mouseX = int(x / float64(width) * float64(e.textureW))
+	e.mouseY = int(y / float64(height) * float64(e.textureH))
 }
