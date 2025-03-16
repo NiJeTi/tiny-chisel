@@ -1,7 +1,7 @@
 package engine
 
 const (
-	windowTitle  = "graphics"
+	windowTitle  = "tiny-chisel"
 	windowWidth  = 1280
 	windowHeight = 720
 )
