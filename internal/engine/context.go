@@ -2,10 +2,11 @@ package engine
 
 import (
 	"context"
+	"image/color"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 
-	"github.com/nijeti/graphics/internal/types"
+	"github.com/nijeti/graphics/internal/utils"
 )
 
 type Context interface {
@@ -17,7 +18,7 @@ type Context interface {
 	MousePos() (x int, y int)
 
 	SpaceSize() (width, height int)
-	SetPixel(x, y int, color types.Color)
+	SetPixel(x, y int, color color.RGBA)
 }
 
 type input struct {
@@ -31,7 +32,7 @@ type eCtx struct {
 	input input
 
 	textureW, textureH int
-	texture            [][]types.Color
+	texture            [][]color.RGBA
 }
 
 func (c *eCtx) KeyState(key glfw.Key) bool {
@@ -52,7 +53,7 @@ func (c *eCtx) SpaceSize() (width, height int) {
 	return c.textureW, c.textureH
 }
 
-func (c *eCtx) SetPixel(x, y int, color types.Color) {
+func (c *eCtx) SetPixel(x, y int, color color.RGBA) {
 	if x > len(c.texture) || y > len(c.texture[0]) {
 		panic("failed to set pixel out of bounds")
 	}
@@ -61,11 +62,11 @@ func (c *eCtx) SetPixel(x, y int, color types.Color) {
 }
 
 func (e *Engine) initContext(ctx context.Context) *eCtx {
-	texture := make([][]types.Color, 0, e.textureW)
+	texture := make([][]color.RGBA, 0, e.textureW)
 	for range e.textureW {
-		pixels := make([]types.Color, 0, e.textureH)
+		pixels := make([]color.RGBA, 0, e.textureH)
 		for range e.textureH {
-			pixels = append(pixels, types.ColorBlack())
+			pixels = append(pixels, utils.ColorBlack())
 		}
 		texture = append(texture, pixels)
 	}
