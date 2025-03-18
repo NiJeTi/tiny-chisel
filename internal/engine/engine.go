@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -110,8 +111,11 @@ func (e *Engine) fixedTick(ctx Context, done func()) {
 	}
 }
 
-func (*Engine) preFrame() {
+func (e *Engine) preFrame() {
 	glfw.PollEvents()
+
+	title := fmt.Sprintf("%s | FPS: %.2f", windowTitle, 1/e.delta.Seconds())
+	e.window.SetTitle(title)
 }
 
 func (e *Engine) isRunning(ctx Context) bool {
