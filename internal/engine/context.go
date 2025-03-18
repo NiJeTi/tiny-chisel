@@ -3,12 +3,16 @@ package engine
 import (
 	"context"
 	colorPkg "image/color"
+	"time"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
 type Context interface {
 	context.Context
+
+	Delta() time.Duration
+	FixedDelta() time.Duration
 
 	KeyState(key glfw.Key) bool
 
@@ -27,10 +31,22 @@ type input struct {
 
 type engineCtx struct {
 	context.Context
+
+	delta      *time.Duration
+	fixedDelta *time.Duration
+
 	input input
 
 	textureW, textureH *int
 	textureData        *[]byte
+}
+
+func (c *engineCtx) Delta() time.Duration {
+	return *c.delta
+}
+
+func (c *engineCtx) FixedDelta() time.Duration {
+	return *c.fixedDelta
 }
 
 func (c *engineCtx) KeyState(key glfw.Key) bool {
@@ -76,7 +92,9 @@ func (c *engineCtx) SetPixel(x, y int, color colorPkg.RGBA) {
 
 func (e *Engine) initContext(ctx context.Context) *engineCtx {
 	ectx := &engineCtx{
-		Context: ctx,
+		Context:    ctx,
+		delta:      &e.delta,
+		fixedDelta: &e.fixedDelta,
 		input: input{
 			keys:         &e.keyStates,
 			mouseButtons: &e.mouseStates,

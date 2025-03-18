@@ -1,5 +1,9 @@
 package engine
 
+import (
+	"time"
+)
+
 const (
 	windowTitle  = "tiny-chisel"
 	windowWidth  = 1280
@@ -35,4 +39,9 @@ const (
 	pixelSize     = 4
 	textureWidth  = windowWidth / pixelSize
 	textureHeight = windowHeight / pixelSize
+)
+
+const (
+	fixedTickRate = 60
+	fixedDelta    = time.Second / fixedTickRate
 )

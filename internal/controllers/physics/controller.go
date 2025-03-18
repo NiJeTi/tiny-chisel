@@ -1,7 +1,8 @@
-package simulation
+package physics
 
 import (
 	"math/rand/v2"
+	"time"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 
@@ -10,11 +11,16 @@ import (
 	"github.com/nijeti/graphics/internal/utils"
 )
 
-const brushRadius = 3
+const (
+	brushRadius  = 3
+	brushOpacity = 0.5
+)
 
 type Controller struct {
 	width, height int
 	particles     [][]Particle
+
+	lastTick time.Time
 }
 
 func New() *Controller {
@@ -46,26 +52,32 @@ func (c *Controller) Init(ctx engine.Context) {
 }
 
 func (c *Controller) Tick(ctx engine.Context) {
+	defer c.toSpace(ctx)
+
 	if ctx.MouseButtonState(glfw.MouseButtonLeft) {
 		x, y := ctx.MousePos()
 
-		// Fill particles with sand within the brushRadius around (x, y)
 		for dx := -brushRadius; dx <= brushRadius; dx++ {
 			for dy := -brushRadius; dy <= brushRadius; dy++ {
 				nx, ny := x+dx, y+dy
-				// Check if the position is within the bounds of the grid
-				if nx >= 0 && nx < c.width && ny >= 0 && ny < c.height {
-					// Check if the position falls within the circular brush radius
-					if dx*dx+dy*dy <= brushRadius*brushRadius {
-						if rand.IntN(2) == 1 {
-							c.particles[nx][ny] = ParticleSand()
-						}
-					}
+
+				if nx < 0 || nx >= c.width || ny < 0 || ny >= c.height {
+					continue
+				}
+
+				if dx*dx+dy*dy > brushRadius*brushRadius {
+					continue
+				}
+
+				if rand.Float32() < brushOpacity {
+					c.particles[nx][ny] = ParticleSand()
 				}
 			}
 		}
 	}
+}
 
+func (c *Controller) FixedTick(ctx engine.Context) {
 	for x := c.width - 1; x >= 0; x-- {
 		for y := c.height - 1; y >= 0; y-- {
 			belowX, belowY := x, y+1
@@ -82,8 +94,6 @@ func (c *Controller) Tick(ctx engine.Context) {
 			}
 		}
 	}
-
-	c.toSpace(ctx)
 }
 
 func (c *Controller) isEmpty(x, y int) bool {

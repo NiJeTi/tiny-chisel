@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/nijeti/graphics/internal/controllers/simulation"
+	"github.com/nijeti/graphics/internal/controllers/physics"
 	"github.com/nijeti/graphics/internal/engine"
 )
 
@@ -47,7 +47,7 @@ func run() (code int) {
 
 	e, err := engine.Init(
 		ctx, logger.With("module", "engine"),
-		simulation.New(),
+		physics.New(),
 	)
 	if err != nil {
 		logger.Error("failed to initialize engine", "error", err)

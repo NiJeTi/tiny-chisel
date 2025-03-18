@@ -1,4 +1,4 @@
-package simulation
+package physics
 
 import (
 	"image/color"

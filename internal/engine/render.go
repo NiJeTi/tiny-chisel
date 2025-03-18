@@ -91,7 +91,7 @@ func (e *Engine) shutdownRender() {
 	e.logger.Debug("render shutdown complete")
 }
 
-func (e *Engine) render(ctx *engineCtx) {
+func (e *Engine) render(ctx context.Context) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	gl.TexImage2D(
