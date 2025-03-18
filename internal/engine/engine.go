@@ -16,7 +16,7 @@ type Engine struct {
 
 	textureW, textureH int
 	vao, vbo, texture  uint32
-	pixelData          []byte
+	textureData        []byte
 
 	keyStates      map[glfw.Key]bool
 	mouseStates    map[glfw.MouseButton]bool
@@ -58,7 +58,7 @@ func (e *Engine) Run(ctx context.Context) {
 	}
 
 	for !e.window.ShouldClose() && ctx.Err() == nil {
-		e.preTick(ectx)
+		e.preTick()
 
 		for _, c := range e.controllers {
 			c.Tick(ectx)
@@ -74,14 +74,6 @@ func (e *Engine) Shutdown() {
 	e.shutdownGLFW()
 }
 
-func (e *Engine) preTick(ctx *eCtx) {
+func (e *Engine) preTick() {
 	glfw.PollEvents()
-
-	for key, state := range e.keyStates {
-		ctx.input.keys[key] = state
-	}
-	for button, state := range e.mouseStates {
-		ctx.input.mouseButtons[button] = state
-	}
-	ctx.input.mouseX, ctx.input.mouseY = e.mouseX, e.mouseY
 }

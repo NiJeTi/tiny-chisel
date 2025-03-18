@@ -69,7 +69,7 @@ func (e *Engine) initRender(ctx context.Context, width, height int) error {
 	gl.UseProgram(e.prog)
 
 	e.textureW, e.textureH = width, height
-	e.pixelData = make([]byte, width*height*sizeColor)
+	e.textureData = make([]byte, width*height*sizeColor)
 
 	e.logger.DebugContext(ctx, "render initialized")
 
@@ -91,26 +91,7 @@ func (e *Engine) shutdownRender() {
 	e.logger.Debug("render shutdown complete")
 }
 
-func (e *Engine) render(ctx *eCtx) {
-	for x := range e.textureW {
-		for y := range e.textureH {
-			offset := (x + (e.textureH-1-y)*e.textureW) * sizeColor
-			const (
-				rOffset = iota
-				gOffset
-				bOffset
-				aOffset
-			)
-
-			c := ctx.texture[x][y]
-
-			e.pixelData[offset+rOffset] = c.R
-			e.pixelData[offset+gOffset] = c.G
-			e.pixelData[offset+bOffset] = c.B
-			e.pixelData[offset+aOffset] = c.A
-		}
-	}
-
+func (e *Engine) render(ctx *engineCtx) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	gl.TexImage2D(
@@ -122,7 +103,7 @@ func (e *Engine) render(ctx *eCtx) {
 		0,
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
-		gl.Ptr(e.pixelData),
+		gl.Ptr(e.textureData),
 	)
 	gl.DrawArrays(gl.TRIANGLES, 0, quadVerticesCount)
 
