@@ -2,7 +2,6 @@ package physics
 
 import (
 	"math/rand/v2"
-	"time"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 
@@ -19,8 +18,6 @@ const (
 type Controller struct {
 	width, height int
 	particles     [][]Particle
-
-	lastTick time.Time
 }
 
 func New() *Controller {
@@ -77,20 +74,12 @@ func (c *Controller) Tick(ctx engine.Context) {
 	}
 }
 
-func (c *Controller) FixedTick(ctx engine.Context) {
+func (c *Controller) FixedTick(engine.Context) {
 	for x := c.width - 1; x >= 0; x-- {
 		for y := c.height - 1; y >= 0; y-- {
-			belowX, belowY := x, y+1
-			belowLeftX := belowX - 1
-			belowRightY := belowX + 1
-
-			switch {
-			case c.isEmpty(belowX, belowY):
-				c.swapParticles(x, y, belowX, belowY)
-			case c.isEmpty(belowLeftX, belowY):
-				c.swapParticles(x, y, belowLeftX, belowY)
-			case c.isEmpty(belowRightY, belowY):
-				c.swapParticles(x, y, belowRightY, belowY)
+			switch c.particles[x][y].Type {
+			case ParticleTypeSand:
+				c.processSand(x, y)
 			}
 		}
 	}
@@ -114,9 +103,8 @@ func (c *Controller) particle(x, y int) (Particle, bool) {
 }
 
 func (c *Controller) swapParticles(srcX, srcY int, dstX, dstY int) {
-	temp := c.particles[srcX][srcY]
-	c.particles[srcX][srcY] = c.particles[dstX][dstY]
-	c.particles[dstX][dstY] = temp
+	c.particles[srcX][srcY], c.particles[dstX][dstY] =
+		c.particles[dstX][dstY], c.particles[srcX][srcY]
 }
 
 func (c *Controller) toSpace(ctx engine.Context) {
@@ -124,5 +112,34 @@ func (c *Controller) toSpace(ctx engine.Context) {
 		for y := range c.particles[x] {
 			ctx.SetPixel(x, y, c.particles[x][y].Color)
 		}
+	}
+}
+
+func (c *Controller) processSand(x, y int) {
+	belowX, belowY := x, y+1
+	belowLeftX := belowX - 1
+	belowRightX := belowX + 1
+
+	if c.isEmpty(belowX, belowY) {
+		c.swapParticles(x, y, belowX, belowY)
+		return
+	}
+
+	belowLeftEmpty := c.isEmpty(belowLeftX, belowY)
+	belowRightEmpty := c.isEmpty(belowRightX, belowY)
+
+	if belowLeftEmpty && belowRightEmpty {
+		if rand.Float32() < 0.5 {
+			belowRightEmpty = false
+		} else {
+			belowLeftEmpty = false
+		}
+	}
+
+	switch {
+	case belowLeftEmpty:
+		c.swapParticles(x, y, belowLeftX, belowY)
+	case belowRightEmpty:
+		c.swapParticles(x, y, belowRightX, belowY)
 	}
 }
