@@ -1,78 +1,99 @@
 package engine
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-func (e *Engine) initGLFW(ctx context.Context) error {
+const (
+	glVersionMajor = 4
+	glVersionMinor = 1
+)
+
+const (
+	shadersDir = "shaders/"
+	shadersExt = ".glsl"
+
+	vertexShaderFile   = "vertex" + shadersExt
+	fragmentShaderFile = "fragment" + shadersExt
+)
+
+func initGLFW(ctx *ectx) (*glfw.Window, error) {
 	if err := glfw.Init(); err != nil {
-		return fmt.Errorf("failed to init glfw: %w", err)
+		return nil, fmt.Errorf("failed to init glfw: %w", err)
 	}
 
-	glfw.WindowHint(glfw.Resizable, glfw.False)
 	glfw.WindowHint(glfw.ContextVersionMajor, glVersionMajor)
 	glfw.WindowHint(glfw.ContextVersionMinor, glVersionMinor)
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 
+	resizable := glfw.False
+	if ctx.windowResizable {
+		resizable = glfw.True
+	}
+	glfw.WindowHint(glfw.Resizable, resizable)
+
 	window, err := glfw.CreateWindow(
-		windowWidth, windowHeight, windowTitle, nil, nil,
+		ctx.windowW, ctx.windowH, ctx.windowTitle, nil, nil,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create window: %w", err)
+		return nil, fmt.Errorf("failed to create window: %w", err)
 	}
 
-	window.SetKeyCallback(e.keyCallback)
-	window.SetMouseButtonCallback(e.mouseCallback)
-	window.SetCursorPosCallback(e.cursorPositionCallback)
+	window.SetKeyCallback(keyCallback(ctx))
+	window.SetMouseButtonCallback(mouseCallback(ctx))
+	window.SetCursorPosCallback(cursorPositionCallback(ctx))
 
 	window.MakeContextCurrent()
-	e.window = window
 
-	e.logger.DebugContext(ctx, "glfw initialized")
+	ctx.logger.DebugContext(ctx, "glfw initialized")
 
-	return nil
+	return window, nil
 }
 
-func (e *Engine) shutdownGLFW() {
+func shutdownGLFW(ctx *ectx) {
 	glfw.Terminate()
 
-	e.logger.Debug("glfw shutdown complete")
+	ctx.logger.Debug("glfw shutdown complete")
 }
 
-func (e *Engine) keyCallback(
-	_ *glfw.Window,
-	key glfw.Key,
-	_ int,
-	action glfw.Action,
-	_ glfw.ModifierKey,
-) {
-	e.keyStates[key] = action == glfw.Press
-}
-
-func (e *Engine) mouseCallback(
-	_ *glfw.Window,
-	button glfw.MouseButton,
-	action glfw.Action,
-	_ glfw.ModifierKey,
-) {
-	e.mouseStates[button] = action == glfw.Press
-}
-
-func (e *Engine) cursorPositionCallback(
-	w *glfw.Window, x float64, y float64,
-) {
-	width, height := w.GetSize()
-	if x < 0 || x > float64(width) {
-		return
+func keyCallback(ctx *ectx) glfw.KeyCallback {
+	return func(
+		_ *glfw.Window,
+		key glfw.Key,
+		_ int,
+		action glfw.Action,
+		_ glfw.ModifierKey,
+	) {
+		ctx.keys[key] = action == glfw.Press
 	}
-	if y < 0 || y > float64(height) {
-		return
-	}
+}
 
-	e.mouseX = int(x / float64(width) * float64(e.textureW))
-	e.mouseY = int(y / float64(height) * float64(e.textureH))
+func mouseCallback(ctx *ectx) glfw.MouseButtonCallback {
+	return func(
+		_ *glfw.Window,
+		button glfw.MouseButton,
+		action glfw.Action,
+		_ glfw.ModifierKey,
+	) {
+		ctx.mouseButtons[button] = action == glfw.Press
+	}
+}
+
+func cursorPositionCallback(ctx *ectx) glfw.CursorPosCallback {
+	return func(w *glfw.Window, x float64, y float64) {
+		width, height := w.GetSize()
+
+		if x < 0 || x > float64(width) {
+			return
+		}
+		if y < 0 || y > float64(height) {
+			return
+		}
+
+		ctx.mouseX = int(x / float64(width) * float64(ctx.spaceW))
+		ctx.mouseY = int(y / float64(height) * float64(ctx.spaceH))
+	}
 }

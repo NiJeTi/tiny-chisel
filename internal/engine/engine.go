@@ -3,121 +3,79 @@ package engine
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-type Engine struct {
-	logger *slog.Logger
-
-	window *glfw.Window
-
-	prog uint32
-
-	textureW, textureH int
-	vao, vbo, texture  uint32
-	textureData        []byte
-
-	fixedDelta time.Duration
-	delta      time.Duration
-	lastFrame  time.Time
-
-	keyStates      map[glfw.Key]bool
-	mouseStates    map[glfw.MouseButton]bool
-	mouseX, mouseY int
-
-	controllers []Controller
-}
-
-func Init(
-	ctx context.Context, logger *slog.Logger, controllers ...Controller,
-) (*Engine, error) {
-	e := &Engine{
-		logger:      logger,
-		fixedDelta:  fixedDelta,
-		keyStates:   make(map[glfw.Key]bool),
-		mouseStates: make(map[glfw.MouseButton]bool),
-		controllers: controllers,
+func Run(ctx context.Context, opts ...Option) error {
+	ectx := newCtx(ctx)
+	for _, opt := range opts {
+		opt(ectx)
 	}
+	ectx.Init()
 
-	if err := e.initGLFW(ctx); err != nil {
-		return nil, err
+	ectx.logger.InfoContext(ctx, "initializing")
+
+	window, err := initGLFW(ectx)
+	if err != nil {
+		return err
 	}
+	defer shutdownGLFW(ectx)
 
-	if err := e.initOpenGL(ctx); err != nil {
-		return nil, err
+	program, err := initOpenGL(ectx)
+	if err != nil {
+		return err
 	}
+	defer shutdownOpenGL(ectx, program)
 
-	if err := e.initRender(ctx, textureWidth, textureHeight); err != nil {
-		return nil, err
+	vao, vbo, texture, err := initRender(ectx, program)
+	if err != nil {
+		return err
 	}
+	defer shutdownRender(ectx, vao, vbo, texture)
 
-	return e, nil
-}
+	ectx.logger.InfoContext(ctx, "running")
 
-func (e *Engine) Run(ctx context.Context) {
-	ectx := e.initContext(ctx)
-
-	for _, c := range e.controllers {
+	for _, c := range ectx.controllers {
 		c.Init(ectx)
 	}
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	done := func() { wg.Done() }
+	for frame := 0; !window.ShouldClose() && ctx.Err() == nil; frame++ {
+		frameStart := time.Now()
 
-	go e.fixedTick(ectx, done)
-	e.tick(ectx)
+		preTick()
 
-	wg.Wait()
-}
-
-func (e *Engine) Shutdown() {
-	e.shutdownRender()
-	e.shutdownOpenGL()
-	e.shutdownGLFW()
-}
-
-func (e *Engine) tick(ctx Context) {
-	for e.isRunning(ctx) {
-		now := time.Now()
-		e.delta = now.Sub(e.lastFrame)
-		e.lastFrame = now
-
-		e.preFrame()
-
-		for _, c := range e.controllers {
-			c.Tick(ctx)
+		for _, c := range ectx.controllers {
+			c.Tick(ectx)
 		}
 
-		e.render(ctx)
+		render(ectx, window)
+
+		frameTime := time.Since(frameStart)
+		outputStats(ectx, window, frame, frameTime)
+		time.Sleep(frameDelta - frameTime)
 	}
+
+	ectx.logger.InfoContext(ctx, "shutting down")
+
+	return nil
 }
 
-func (e *Engine) fixedTick(ctx Context, done func()) {
-	defer done()
-
-	for e.isRunning(ctx) {
-		start := time.Now()
-		for _, c := range e.controllers {
-			c.FixedTick(ctx)
-		}
-		duration := time.Since(start)
-
-		time.Sleep(e.fixedDelta - duration)
-	}
-}
-
-func (e *Engine) preFrame() {
+func preTick() {
 	glfw.PollEvents()
-
-	title := fmt.Sprintf("%s | FPS: %.2f", windowTitle, 1/e.delta.Seconds())
-	e.window.SetTitle(title)
 }
 
-func (e *Engine) isRunning(ctx Context) bool {
-	return !e.window.ShouldClose() && ctx.Err() == nil
+func outputStats(
+	ctx *ectx, window *glfw.Window, frame int, frameTime time.Duration,
+) {
+	if frame%3 != 0 {
+		return
+	}
+
+	title := fmt.Sprintf(
+		"%s | FT: %.2fms",
+		ctx.windowTitle, float64(frameTime.Microseconds())/1000,
+	)
+	window.SetTitle(title)
 }

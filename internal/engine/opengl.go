@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,45 +8,44 @@ import (
 	"github.com/go-gl/gl/v4.1-core/gl"
 )
 
-func (e *Engine) initOpenGL(ctx context.Context) error {
+func initOpenGL(ctx *ectx) (uint32, error) {
 	if err := gl.Init(); err != nil {
-		return fmt.Errorf("failed to initialize opengl: %w", err)
+		return 0, fmt.Errorf("failed to initialize opengl: %w", err)
 	}
 
-	vertexShader, err := e.compileShader(
+	vertexShader, err := compileShader(
 		filepath.Join(shadersDir, vertexShaderFile), gl.VERTEX_SHADER,
 	)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	e.logger.DebugContext(ctx, "vertex shader compiled")
+	ctx.logger.DebugContext(ctx, "vertex shader compiled")
 
-	fragmentShader, err := e.compileShader(
+	fragmentShader, err := compileShader(
 		filepath.Join(shadersDir, fragmentShaderFile), gl.FRAGMENT_SHADER,
 	)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	e.logger.DebugContext(ctx, "fragment shader compiled")
+	ctx.logger.DebugContext(ctx, "fragment shader compiled")
 
-	progRef := gl.CreateProgram()
-	gl.AttachShader(progRef, vertexShader)
-	gl.AttachShader(progRef, fragmentShader)
-	gl.LinkProgram(progRef)
-	e.prog = progRef
+	program := gl.CreateProgram()
+	gl.AttachShader(program, vertexShader)
+	gl.AttachShader(program, fragmentShader)
+	gl.LinkProgram(program)
 
-	e.logger.DebugContext(ctx, "opengl initialized")
+	ctx.logger.DebugContext(ctx, "opengl initialized")
 
-	return nil
+	return program, nil
 }
 
-func (e *Engine) shutdownOpenGL() {
-	gl.DeleteProgram(e.prog)
+func shutdownOpenGL(ctx *ectx, program uint32) {
+	gl.DeleteProgram(program)
 
-	e.logger.Debug("opengl shutdown complete")
+	ctx.logger.Debug("opengl shutdown complete")
 }
 
-func (*Engine) compileShader(path string, shaderType uint32) (uint32, error) {
+func compileShader(path string, shaderType uint32) (uint32, error) {
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read shader file: %w", err)

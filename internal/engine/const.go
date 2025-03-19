@@ -5,22 +5,15 @@ import (
 )
 
 const (
-	windowTitle  = "tiny-chisel"
-	windowWidth  = 1280
-	windowHeight = 720
+	defaultWindowTitle     = "tiny-chisel"
+	defaultWindowW         = 1280
+	defaultWindowH         = 720
+	defaultWindowResizable = true
 )
 
 const (
-	glVersionMajor = 4
-	glVersionMinor = 1
-)
-
-const (
-	shadersDir = "shaders/"
-	shadersExt = ".glsl"
-
-	vertexShaderFile   = "vertex.glsl"
-	fragmentShaderFile = "fragment.glsl"
+	frameRate  = 60
+	frameDelta = time.Second / frameRate
 )
 
 const (
@@ -33,15 +26,4 @@ const (
 	vertexPosSize     = 2
 	texturePosSize    = 2
 	vertexInfoSize    = vertexPosSize + texturePosSize
-)
-
-const (
-	pixelSize     = 4
-	textureWidth  = windowWidth / pixelSize
-	textureHeight = windowHeight / pixelSize
-)
-
-const (
-	fixedTickRate = 60
-	fixedDelta    = time.Second / fixedTickRate
 )

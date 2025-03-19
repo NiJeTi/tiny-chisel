@@ -1,13 +1,15 @@
 package engine
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
+	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-func (e *Engine) initRender(ctx context.Context, width, height int) error {
+func initRender(ctx *ectx, program uint32) (
+	vao uint32, vbo uint32, texture uint32, err error,
+) {
 	quadVertices := []float32{
 		// 1st triangle
 		-1, 1, // top-left
@@ -30,11 +32,11 @@ func (e *Engine) initRender(ctx context.Context, width, height int) error {
 		0, 1,
 	}
 
-	gl.GenVertexArrays(1, &e.vao)
-	gl.BindVertexArray(e.vao)
+	gl.GenVertexArrays(1, &vao)
+	gl.BindVertexArray(vao)
 
-	gl.GenBuffers(1, &e.vbo)
-	gl.BindBuffer(gl.ARRAY_BUFFER, e.vbo)
+	gl.GenBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(
 		gl.ARRAY_BUFFER,
 		len(quadVertices)*sizeFloat32,
@@ -61,56 +63,53 @@ func (e *Engine) initRender(ctx context.Context, width, height int) error {
 	)
 	gl.EnableVertexAttribArray(1)
 
-	gl.GenTextures(1, &e.texture)
-	gl.BindTexture(gl.TEXTURE_2D, e.texture)
+	gl.GenTextures(1, &texture)
+	gl.BindTexture(gl.TEXTURE_2D, texture)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 
-	gl.UseProgram(e.prog)
+	gl.UseProgram(program)
 
-	e.textureW, e.textureH = width, height
-	e.textureData = make([]byte, width*height*sizeColor)
+	ctx.logger.DebugContext(ctx, "render initialized")
 
-	e.logger.DebugContext(ctx, "render initialized")
-
-	return nil
+	return
 }
 
-func (e *Engine) shutdownRender() {
+func shutdownRender(ctx *ectx, vao uint32, vbo uint32, texture uint32) {
 	gl.BindTexture(gl.TEXTURE_2D, 0)
-	gl.DeleteTextures(1, &e.texture)
+	gl.DeleteTextures(1, &texture)
 
 	gl.DisableVertexAttribArray(1)
 	gl.DisableVertexAttribArray(0)
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-	gl.DeleteBuffers(1, &e.vbo)
+	gl.DeleteBuffers(1, &vbo)
 
 	gl.BindVertexArray(0)
-	gl.DeleteVertexArrays(1, &e.vao)
+	gl.DeleteVertexArrays(1, &vao)
 
-	e.logger.Debug("render shutdown complete")
+	ctx.logger.Debug("render shutdown complete")
 }
 
-func (e *Engine) render(ctx context.Context) {
+func render(ctx *ectx, window *glfw.Window) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	gl.TexImage2D(
 		gl.TEXTURE_2D,
 		0,
 		gl.RGBA,
-		int32(e.textureW),
-		int32(e.textureH),
+		int32(ctx.spaceW),
+		int32(ctx.spaceH),
 		0,
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
-		gl.Ptr(e.textureData),
+		gl.Ptr(ctx.textureData),
 	)
 	gl.DrawArrays(gl.TRIANGLES, 0, quadVerticesCount)
 
 	if err := gl.GetError(); err != gl.NO_ERROR {
 		errCode := fmt.Errorf("%d (0x%x)", err, err)
-		e.logger.ErrorContext(ctx, "opengl error", "error", errCode)
+		ctx.logger.ErrorContext(ctx, "opengl error", "error", errCode)
 	}
 
-	e.window.SwapBuffers()
+	window.SwapBuffers()
 }

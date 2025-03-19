@@ -42,27 +42,17 @@ func run() (code int) {
 	)
 	defer cancel()
 
-	// init
-	logger.InfoContext(ctx, "initializing")
-
-	e, err := engine.Init(
-		ctx, logger.With("module", "engine"),
-		physics.New(),
+	err := engine.Run(
+		ctx,
+		engine.WithLogger(logger.With("module", "engine")),
+		engine.ConfigureWindow("tiny-chisel", 1280, 720, true),
+		engine.ConfigureSpace(640, 360),
+		engine.WithControllers(physics.New()),
 	)
 	if err != nil {
-		logger.Error("failed to initialize engine", "error", err)
+		logger.Error("failed to run engine", "error", err)
 		return codeErr
 	}
-	defer e.Shutdown()
-	logger.Info("engine initialized")
-
-	// run
-	logger.InfoContext(ctx, "running")
-
-	e.Run(ctx)
-
-	// exit
-	logger.Info("exiting")
 
 	return codeOk
 }

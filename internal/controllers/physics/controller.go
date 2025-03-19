@@ -45,59 +45,19 @@ func (c *Controller) Init(ctx engine.Context) {
 }
 
 func (c *Controller) Tick(ctx engine.Context) {
-	defer c.render(ctx)
 
 	switch {
 	case ctx.MouseButtonState(glfw.MouseButtonLeft):
-		c.draw(ctx, ParticleSand())
+		c.place(ctx, ParticleSand())
 	case ctx.MouseButtonState(glfw.MouseButtonRight):
-		c.draw(ctx, ParticleWater())
-	}
-}
-
-func (c *Controller) FixedTick(engine.Context) {
-	for x := c.width - 1; x >= 0; x-- {
-		for y := c.height - 1; y >= 0; y-- {
-			switch c.particles[x][y].Type {
-			case ParticleTypeSand:
-				c.processSand(x, y)
-			case ParticleTypeWater:
-				c.processWater(x, y)
-			}
-		}
-	}
-}
-
-func (c *Controller) render(ctx engine.Context) {
-	for x := range c.particles {
-		for y := range c.particles[x] {
-			ctx.SetPixel(x, y, c.particles[x][y].Color)
-		}
-	}
-}
-
-func (c *Controller) isEmpty(x, y int) bool {
-	p, ok := c.particle(x, y)
-	return ok && p.Type == ParticleTypeEmpty
-}
-
-func (c *Controller) particle(x, y int) (Particle, bool) {
-	if x >= c.width || x < 0 {
-		return Particle{}, false
-	}
-	if y >= c.height || y < 0 {
-		return Particle{}, false
+		c.place(ctx, ParticleWater())
 	}
 
-	return c.particles[x][y], true
+	c.processParticles()
+	c.render(ctx)
 }
 
-func (c *Controller) swapParticles(srcX, srcY int, dstX, dstY int) {
-	c.particles[srcX][srcY], c.particles[dstX][dstY] =
-		c.particles[dstX][dstY], c.particles[srcX][srcY]
-}
-
-func (c *Controller) draw(ctx engine.Context, p Particle) {
+func (c *Controller) place(ctx engine.Context, p Particle) {
 	x, y := ctx.MousePos()
 
 	for dx := -brushRadius; dx <= brushRadius; dx++ {
@@ -115,6 +75,27 @@ func (c *Controller) draw(ctx engine.Context, p Particle) {
 			if rand.Float32() < brushOpacity {
 				c.particles[nx][ny] = p
 			}
+		}
+	}
+}
+
+func (c *Controller) processParticles() {
+	for x := c.width - 1; x >= 0; x-- {
+		for y := c.height - 1; y >= 0; y-- {
+			switch c.particles[x][y].Type {
+			case ParticleTypeSand:
+				c.processSand(x, y)
+			case ParticleTypeWater:
+				c.processWater(x, y)
+			}
+		}
+	}
+}
+
+func (c *Controller) render(ctx engine.Context) {
+	for x := range c.particles {
+		for y := range c.particles[x] {
+			ctx.SetPixel(x, y, c.particles[x][y].Color)
 		}
 	}
 }
@@ -150,4 +131,25 @@ func (c *Controller) processWater(x, y int) {
 	case c.isEmpty(rightX, y):
 		c.swapParticles(x, y, rightX, y)
 	}
+}
+
+func (c *Controller) isEmpty(x, y int) bool {
+	p, ok := c.particle(x, y)
+	return ok && p.Type == ParticleTypeEmpty
+}
+
+func (c *Controller) particle(x, y int) (Particle, bool) {
+	if x >= c.width || x < 0 {
+		return Particle{}, false
+	}
+	if y >= c.height || y < 0 {
+		return Particle{}, false
+	}
+
+	return c.particles[x][y], true
+}
+
+func (c *Controller) swapParticles(srcX, srcY int, dstX, dstY int) {
+	c.particles[srcX][srcY], c.particles[dstX][dstY] =
+		c.particles[dstX][dstY], c.particles[srcX][srcY]
 }
